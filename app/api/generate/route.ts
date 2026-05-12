@@ -19,7 +19,7 @@ const BOP = {
 }
 
 function formatDate(val: unknown): string {
-  if (!val) return ''
+  if (!val) return new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
   if (val instanceof Date) return val.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
   const d = new Date(String(val))
   if (!isNaN(d.getTime())) return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
@@ -41,17 +41,15 @@ async function buildExcelInvoice(row: Record<string, unknown>): Promise<Buffer> 
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Summary')
 
-  // Column widths matching reference
-  ws.getColumn(1).width = 14  // A
-  ws.getColumn(2).width = 26  // B
-  ws.getColumn(3).width = 14  // C
-  ws.getColumn(4).width = 14  // D
-  ws.getColumn(5).width = 16  // E
-  ws.getColumn(6).width = 12  // F
-  ws.getColumn(7).width = 12  // G
+  ws.getColumn(1).width = 14
+  ws.getColumn(2).width = 26
+  ws.getColumn(3).width = 14
+  ws.getColumn(4).width = 14
+  ws.getColumn(5).width = 16
+  ws.getColumn(6).width = 12
+  ws.getColumn(7).width = 12
 
   const county = String(row['County'] ?? '')
-  const state = String(row['State'] ?? 'PA')
   const flatRate = Number(row['Flat Rate'] ?? row['Total'] ?? 0)
 
   function c(addr: string) { return ws.getCell(addr) }
@@ -70,7 +68,6 @@ async function buildExcelInvoice(row: Record<string, unknown>): Promise<Buffer> 
     cell.alignment = { horizontal: align }
   }
 
-  // Merge A1:G1 for BOP name
   ws.mergeCells('A1:G1')
   const nameCell = c('A1')
   nameCell.value = BOP.name
@@ -101,13 +98,11 @@ async function buildExcelInvoice(row: Record<string, unknown>): Promise<Buffer> 
   invTitle.font = { name: 'Calibri', size: 10, bold: true }
   invTitle.alignment = { horizontal: 'center' }
 
-  // Date / Invoice #
   label('A8', 'Date:')
-  value('B8', formatDate(row['Date']))
+  value('B8', formatDate(row['Date'] ?? new Date()))
   label('E8', 'Invoice #:')
   value('F8', String(row['Invoice Number'] ?? ''))
 
-  // Bill To
   label('A10', 'Bill To:')
   value('B10', BILL_TO.company)
   label('E10', 'Project:')
@@ -115,22 +110,19 @@ async function buildExcelInvoice(row: Record<string, unknown>): Promise<Buffer> 
 
   value('B11', BILL_TO.attn)
   label('E11', 'County:')
-  value('F11', `${county}, ${state}`)
+  value('F11', `${county}, PA`)
 
   value('B12', BILL_TO.address)
   value('B13', BILL_TO.city)
 
-  // Period
   label('A16', 'Period:')
   value('B16', String(row['Period'] ?? ''))
 
-  // DUE UPON RECEIPT in red
   const dueCell = c('G17')
   dueCell.value = 'DUE UPON RECEIPT'
   dueCell.font = { name: 'Calibri', size: 9, color: { argb: 'FFFF0000' } }
   dueCell.alignment = { horizontal: 'right' }
 
-  // Table header row 18 — light pink/red background matching reference FFF2DCDB
   const headers = ['File #', 'PID', 'Unit', 'County', 'Work Type', 'Flat Rate', 'Total']
   const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
   ws.getRow(18).height = 16
@@ -143,7 +135,6 @@ async function buildExcelInvoice(row: Record<string, unknown>): Promise<Buffer> 
     cell.border = thinBorder
   })
 
-  // Data row 19
   const dataVals = [
     String(row['File #'] ?? ''),
     String(row['PID'] ?? ''),
@@ -171,7 +162,6 @@ async function buildExcelInvoice(row: Record<string, unknown>): Promise<Buffer> 
   totalCell.font = { name: 'Calibri', size: 9 }
   totalCell.border = thinBorder
 
-  // Totals row 20
   const filesCell = c('B20')
   filesCell.value = { formula: '=COUNTA(B19:B19)&" Files"' }
   filesCell.font = { name: 'Calibri', size: 9, bold: true }
@@ -207,14 +197,14 @@ async function buildPdfInvoice(row: Record<string, unknown>): Promise<Buffer> {
 
   const black = [0, 0, 0] as [number, number, number]
   const red = [255, 0, 0] as [number, number, number]
-  const headerBg = [242, 220, 219] as [number, number, number] // FFF2DCDB
+  const headerBg = [242, 220, 219] as [number, number, number]
   const white = [255, 255, 255] as [number, number, number]
 
-  // White background
+  const county = String(row['County'] ?? '')
+
   doc.setFillColor(...white)
   doc.rect(0, 0, 612, 792, 'F')
 
-  // BOP Header - centered
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
   doc.setTextColor(...black)
@@ -226,51 +216,42 @@ async function buildPdfInvoice(row: Record<string, unknown>): Promise<Buffer> {
   doc.text(BOP.city, 306, 75, { align: 'center' })
   doc.text(BOP.phone, 306, 87, { align: 'center' })
 
-  // INVOICE title - centered
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
   doc.text('INVOICE', 306, 115, { align: 'center' })
 
-  // Thin separator line
   doc.setDrawColor(...black)
   doc.setLineWidth(0.5)
   doc.line(40, 122, 572, 122)
 
-  // Date / Invoice # row
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...black)
   doc.text('Date:', 100, 140, { align: 'right' })
-  doc.text(formatDate(row['Date']), 105, 140)
+  doc.text(formatDate(row['Date'] ?? new Date()), 105, 140)
 
   doc.text('Invoice #:', 420, 140, { align: 'right' })
   doc.text(String(row['Invoice Number'] ?? ''), 425, 140)
 
-  // Bill To
   doc.text('Bill To:', 100, 158, { align: 'right' })
   doc.text(BILL_TO.company, 105, 158)
   doc.text('Project:', 420, 158, { align: 'right' })
   doc.text(BILL_TO.project, 425, 158)
 
   doc.text(BILL_TO.attn, 105, 170)
-  const county = String(row['County'] ?? '')
-  const state = String(row['State'] ?? 'PA')
   doc.text('County:', 420, 170, { align: 'right' })
-  doc.text(`${county}, ${state}`, 425, 170)
+  doc.text(`${county}, PA`, 425, 170)
 
   doc.text(BILL_TO.address, 105, 182)
   doc.text(BILL_TO.city, 105, 194)
 
-  // Period
   doc.text('Period:', 100, 215, { align: 'right' })
   doc.text(String(row['Period'] ?? ''), 105, 215)
 
-  // DUE UPON RECEIPT in red
   doc.setTextColor(...red)
   doc.text('DUE UPON RECEIPT', 572, 227, { align: 'right' })
   doc.setTextColor(...black)
 
-  // Invoice table
   const flatRate = Number(row['Flat Rate'] ?? row['Total'] ?? 0)
   const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 
@@ -287,7 +268,7 @@ async function buildPdfInvoice(row: Record<string, unknown>): Promise<Buffer> {
         fmt.format(flatRate),
         fmt.format(flatRate),
       ],
-      ['', `1 Files`, '', '', 'Total', fmt.format(flatRate), fmt.format(flatRate)],
+      ['', '1 Files', '', '', 'Total', fmt.format(flatRate), fmt.format(flatRate)],
     ],
     theme: 'grid',
     styles: {
