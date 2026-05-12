@@ -99,7 +99,7 @@ export default function Home() {
             style={{ width: 140, height: 140, objectFit: 'contain', margin: '0 auto 24px', display: 'block' }}
           />
           <div style={{ fontSize: 20, fontWeight: 600, color: '#c8a96e', marginBottom: 4 }}>
-            BOP ACQUISITION
+            EQT - Targeted Scope
           </div>
           <div style={{ fontSize: 12, color: '#666', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 32 }}>
             Invoice Generator
@@ -175,7 +175,7 @@ export default function Home() {
           />
           <div>
             <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: '0.04em', color: '#c8a96e' }}>
-              BOP ACQUISITION
+              EQT - Targeted Scope
             </div>
             <div style={{ fontSize: 11, color: '#666', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               Invoice Generator
@@ -310,9 +310,7 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 24px' }}>
             {[
-              'Year', 'Lessor 1', 'Lessor 2', 'Status', 'Address',
-              'Township', 'County', 'State', 'Gross Acres', 'Date',
-              'Invoice Number', 'Period', 'File #', 'PID', 'Unit', 'Flat Rate', 'Total'
+              'Invoice Number', 'County', 'Period', 'File #', 'PID', 'Unit', 'Flat Rate', 'Total'
             ].map(col => (
               <span key={col} style={{ fontSize: 12, color: '#666', fontFamily: 'monospace' }}>{col}</span>
             ))}
